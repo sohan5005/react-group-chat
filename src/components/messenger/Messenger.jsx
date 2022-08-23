@@ -2,7 +2,7 @@ import React, { useEffect, useReducer, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 import { v4 as uuid } from 'uuid';
 
-const client = io("ws://localhost:1000/");
+const client = io('ws://' + process.env.REACT_APP_SOCKET_IO_IP + ':1000/');
 const actions = ['ban'];
 
 const Messenger = () => {

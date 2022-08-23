@@ -1,31 +1,33 @@
-const { readFileSync } = require('fs');
+const env = require('dotenv').config({path: __dirname + '/.env'});
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 
+const ip = env.parsed.REACT_APP_SOCKET_IO_IP;
+const port = "3000";
+const hosts = ["http://localhost:" + port];
+if( ip ) {
+  hosts.push( `http://${ip}:${port}` );
+} else {
+  console.log('Server could not start. Environment file not found!!!');
+}
+
 const httpServer = createServer((req, res) => {
+  if (req.url === '/ip') {
+    res.writeHead(200);
+    res.end(ip);
+    return;
+  }
   if (req.url !== '/') {
     res.writeHead(404);
     res.end('Not found');
     return;
   }
-  // reload the file every time
-//   const content = readFileSync('index.html');
-//   const length = Buffer.byteLength(content);
-
-//   res.writeHead(200, {
-//     'Content-Type': 'text/html',
-//     'Content-Length': length
-//   });
-//   res.end(content);
 });
 
 const io = new Server(httpServer, {
   cors: {
-    origin: ["http://localhost:3000"],
-    // allowedHeaders: ["my-custom-header"],
-    // credentials: true
+    origin: hosts,
   }
-  // Socket.IO options
 });
 
 io.on('connection', socket => {
@@ -36,11 +38,11 @@ io.on('connection', socket => {
   });
 
   socket.on('message', data => {
-	  const { from } = data;
+    const { from } = data;
     console.log(`Message Recieved from ${from}`);
 
-	  io.emit('broadcast', data);
+    io.emit('broadcast', data);
   });
 });
-console.log(httpServer);
-httpServer.listen(1000);
+console.log('Starting Server at: ', ip || 'localhost');
+httpServer.listen(1000, ip || 'localhost');
