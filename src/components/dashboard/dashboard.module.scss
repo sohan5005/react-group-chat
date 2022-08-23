@@ -1,0 +1,11 @@
+.dashboard {
+	@apply bg-slate-200 h-screen flex flex-col;
+
+	.head {
+		@apply text-center bg-slate-300 p-4 font-bold uppercase text-slate-500
+	}
+
+	.content {
+		@apply flex-1 flex items-center justify-center w-full overflow-y-auto;
+	}
+}
