@@ -1,20 +1,6 @@
-import { useState } from 'react';
 import styles from './dashboard.module.scss';
 
 const Dashboard = ({ children }) => {
-
-	const [count, setCount] = useState(0);
-
-	const range = (n, min, max) => {
-		return Math.max( Math.min( n, max ), min );
-	}
-
-	const increment = () => {
-		setCount( range( count + 1, 0, 10 ) );
-	}
-	const decrement = () => {
-		setCount( range( count - 1, 0, 10 ) );
-	}
 
 	return (
 		<>
@@ -27,10 +13,4 @@ const Dashboard = ({ children }) => {
 
 }
 
-const doAll = () => {
-	console.log('Doall');
-}
-
 export default Dashboard;
-
-export {doAll};

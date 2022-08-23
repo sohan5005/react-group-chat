@@ -10,6 +10,7 @@ const Messenger = () => {
 	const [myid, setMyid] = useState('');
 	const [myname, setMyName] = useState('');
 	const [joined, setJoin] = useState(false);
+	const [errored, setError] = useState(false);
 	const [msg, setMsg] = useState('');
 	const scrollHandler = useRef();
 	const inputHandler = useRef();
@@ -66,10 +67,12 @@ const Messenger = () => {
 		
 		client.on('connect', () => {
 			console.log('Client Connected!');
+			setError(false);
 		});
 		
 		client.on('connect_error', (error) => {
 			console.error('Connection Error!', error);
+			setError(true);
 		});
 		
 		client.on('disconnect', (reason) => {
@@ -223,7 +226,7 @@ const Messenger = () => {
 				<button className="px-4 bg-slate-800 text-white rounded-r text-sm hover:bg-blue-700 transition-all" type="submit">Send</button>
 			</form>
 			</> }
-			{ !joined && <>
+			{ !joined && !errored && <>
 			<div className="bg-indigo-700 rounded-t px-4 py-2 text-white text-center relative">
 				Enter your name
 			</div>
@@ -231,6 +234,11 @@ const Messenger = () => {
 				<input className="border flex-1 h-9 p-4 outline-none rounded-l" type="text" value={myname} onChange={e => setID(e.target.value)} />
 				<button className="px-4 bg-slate-800 text-white rounded-r text-sm hover:bg-blue-700 transition-all" type="submit">Join</button>
 			</form>
+			</> }
+			{ errored && <>
+			<div className="bg-red-50 text-red-600 p-4 rounded border-2 border-red-400 text-center">
+				Could not connect to server!
+			</div>
 			</> }
 		</div>
 	);
