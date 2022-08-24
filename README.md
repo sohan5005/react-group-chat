@@ -1,6 +1,6 @@
 # What is it?
 
-Very simple, straight forward group chatting app. Just login with a name and start chatting. Use different device on the local network is supported. To ban someone in the chat just send a message like this `ban:user-id` or `unban:user-id`. Currently anyone can ban anyone. I may work on this feature later. Doesn't have any database integration or functionality to keep chat history.
+Very simple, straight forward group chatting app. Just login with a name and start chatting. Use different device on the local network is supported. To ban someone in the chat just send a message like this `ban:user-id` or `unban:user-id`. Currently anyone can ban anyone. I may work on this feature later. Doesn't have any database integration or functionality to keep chat history. Single chatting session (until the server restarts) is stored in variable in server script which is not recommended at all. Need to optimize the session history and implement database solution if possible.
 
 Check contribution notes for more.
 

@@ -18,7 +18,7 @@
 		"web-vitals": "^2.1.4"
 	},
 	"scripts": {
-		"start": "concurrently \"node server\" \"react-scripts start\"",
+		"start": "node postinstall && concurrently \"react-scripts start\" \"node server\"",
 		"dev": "react-scripts start",
 		"build": "react-scripts build",
 		"test": "react-scripts test",

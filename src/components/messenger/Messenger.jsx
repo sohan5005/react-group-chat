@@ -3,7 +3,13 @@ import { io } from 'socket.io-client';
 import { v4 as uuid } from 'uuid';
 
 const client = io('ws://' + process.env.REACT_APP_SOCKET_IO_IP + ':1000/');
-const actions = ['ban'];
+const actions = ['ban', 'unban'];
+const timeUnitDefinitions = {
+	s: 1000,
+	m: 1000 * 60,
+	h: 1000 * 60 * 60,
+	d: 1000 * 60 * 60 * 24,
+};
 
 const Messenger = () => {
 
@@ -17,20 +23,36 @@ const Messenger = () => {
 
 	const [banlist, ban] = useReducer((oldList, upcoming) => {
 
-		const newList = { ...oldList };
-		newList[upcoming.data] ||= 0;
+		const { data, options, type } = upcoming;
 
-		if( upcoming.type === 'unban' ) {
-			newList[upcoming.data] = 0;
+		const newList = { ...oldList };
+		newList[data] ||= 0;
+
+		if( type === 'unban' ) {
+			newList[data] = 0;
 		} else {
-			newList[upcoming.data] = Date.now() + (30 * 1000);
+			const given = options?.[0] || '30s';
+			const length = parseInt(given);
+			const unit = given.toLowerCase().replace( length.toString(), '' );
+			const timeout = length * (timeUnitDefinitions[unit] || 1000);
+			if( newList[data] ) {
+				newList[data] += timeout;
+			} else {
+				newList[data] = Date.now() + (timeout);
+			}
 		}
 
 		return newList;
 	}, {});
 
+	const calculateBanTime = data => {
+		if( data.options?.[0] ) {
+			return 'for ' + data.options[0];
+		}
+		return 'for 30s';
+	}
+
 	const executeAction = action => {
-		console.log(action);
 		if( action.type === 'ban' || action.type === 'unban' ) {
 			ban(action);
 		}
@@ -86,11 +108,26 @@ const Messenger = () => {
 				inputHandler?.current?.focus?.();
 			});
 		});
+	
+		client.on('history', datas => {
+			let count = 0;
+			datas.forEach(data => {
+				count++;
+				updMessage(data);
+				if( count === datas.length ) {
+					setTimeout(() => {
+						scrollHandler?.current?.scrollIntoView?.();
+						inputHandler?.current?.focus?.();
+					});
+				}
+			});
+		});
 
 		return () => {
 			client.off('connect');
 			client.off('disconnect');
 			client.off('broadcast');
+			client.off('history');
 		}
 
 	}, []);
@@ -123,7 +160,21 @@ const Messenger = () => {
 		}
 
 		if( !notBanned({from: myid}) ) {
-			alert('You are still banned!!');
+			const wait = banlist[myid] - Date.now();
+			let { d, h, m, s } = timeUnitDefinitions;
+			if( wait > d ) {
+				alert(`You are still banned!! Wait for ${Math.ceil(wait / d)} days more`);
+			} else if( wait >= h ) {
+				const rwait = Math.floor(wait / h);
+				const ext = 60 + Math.ceil(wait / m) - ( (rwait + 1) * 60 );
+				alert(`You are still banned!! Wait for ${rwait} hours ${ext} minutes more`);
+			} else if( wait >= m ) {
+				const rwait = Math.floor(wait / m);
+				const ext = 60 + Math.ceil(wait / s) - ( (rwait + 1) * 60 );
+				alert(`You are still banned!! Wait for ${rwait} minutes ${ext} seconds more`);
+			} else {
+				alert(`You are still banned!! Wait for ${Math.ceil(wait / s)} seconds more`);
+			}
 			return false;
 		}
 
@@ -188,31 +239,39 @@ const Messenger = () => {
 			</div>
 			{ <div className="flex flex-col gap-4 border p-4 h-96 overflow-y-auto">
 				{ messeges.map( m => {
+					const ownm = m.from === m.data;
+					const selfm = ownm && m.from === myid ? 'Yourself' : ownm ? 'Themself' : false;
 					switch( m.type ) {
 						case 'message':
 							let time = <div className="text-xs font-normal">{ new Date(m.time).toLocaleTimeString() }</div>;
 							return (
-								<div key={m.time} className={ 'bg-slate-100 px-4 py-2 rounded w-3/4 shadow ' + (m.from === myid ? 'bg-green-600 text-white self-end text-right' : '') }>
-									<div className="font-bold text-sm flex items-center">{ m.from === myid && time }<div className="flex-1">{ m.name }</div>{ m.from !== myid && time }</div>
+								<div key={m.time} className={ 'bg-slate-100 px-4 py-2 rounded w-3/4 shadow ' + (m.from === myid ? 'bg-green-600 text-white self-end' : '') }>
+									<div className="font-bold text-sm flex items-center"><div className="flex-1">{ m.name }</div>{ time }</div>
 									<div className="mt-2">{ m.data }</div>
 								</div>
 							);
-						case 'offline': 
+						case 'offline':
 							return (
 								<div key={m.time} className="text-xs text-center text-slate-500">
 									<span className="font-bold text-black">{ m.from === myid ? 'You' : m.name }</span> <span className="text-red-500">left</span> the chat on { new Date(m.time).toLocaleString() }
 								</div>
 							);
-						case 'online': 
+						case 'online':
 							return (
 								<div key={m.time} className="text-xs text-center text-slate-500">
 									<span className="font-bold text-black">{ m.from === myid ? 'You' : m.name }</span> <span className="text-indigo-700">joined</span> the chat on { new Date(m.time).toLocaleString() }
 								</div>
 							);
-						case 'ban': 
+						case 'ban':
 							return (
 								<div key={m.time} className="text-xs text-center text-slate-500">
-									<span className="font-bold text-black">{ m.from === myid ? 'You' : m.name }</span> <span className="text-red-700">banned</span> <span className="underline">{ m.data === myid ? 'You' : m.data }</span>{ m.options?.length ? ' for ' + m.options[0] : '' } on { new Date(m.time).toLocaleString() }
+									<span className="font-bold text-black">{ m.from === myid ? 'You' : m.name }</span> <span className="text-red-700">banned</span> <span className="underline">{ selfm || (m.data === myid ? 'You' : m.data) }</span> { calculateBanTime(m) } on { new Date(m.time).toLocaleString() }
+								</div>
+							);
+						case 'unban':
+							return (
+								<div key={m.time} className="text-xs text-center text-slate-500">
+									<span className="font-bold text-black">{ m.from === myid ? 'You' : m.name }</span> <span className="text-red-700">un-banned</span> <span className="underline">{ selfm || (m.data === myid ? 'You' : m.data) }</span> on { new Date(m.time).toLocaleString() }
 								</div>
 							);
 						default:
